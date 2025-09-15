@@ -75,16 +75,43 @@ export const borrowBook = (req: Request, res: Response): void => {
     try {
         const { id } = req.params;
         const borrowerId = req.body.borrowerId;
+
+        if (!id || id.trim() === "") {
+            res.status(HTTP_STATUS.BAD_REQUEST).json({
+                message: "Book ID parameter is required",
+            });
+            return;
+        }
+
+        if (
+            borrowerId === undefined ||
+            typeof borrowerId !== "string" ||
+            borrowerId.trim() === ""
+        ) {
+            res.status(HTTP_STATUS.BAD_REQUEST).json({
+                message: "borrowerId must be a non-empty string",
+            });
+            return;
+        }
+
         const result = bookService.borrowBook(id, borrowerId);
+
         if (result) {
             res.status(HTTP_STATUS.OK).json({
                 message: "Book borrowed",
                 data: result,
             });
         } else {
-            res.status(HTTP_STATUS.NOT_FOUND).json({
-                message: "Book not found or already borrowed",
-            });
+            const bookExists = bookService.getAllBooks().some((b) => b.id === id);
+            if (!bookExists) {
+                res.status(HTTP_STATUS.NOT_FOUND).json({
+                    message: "Book not found",
+                });
+            } else {
+                res.status(HTTP_STATUS.BAD_REQUEST).json({
+                    message: "Book is already borrowed",
+                });
+            }
         }
     } catch (error) {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
